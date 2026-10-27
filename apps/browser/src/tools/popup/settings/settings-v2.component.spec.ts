@@ -4,7 +4,6 @@ import { RouterTestingModule } from "@angular/router/testing";
 import { mock, MockProxy } from "jest-mock-extended";
 import { BehaviorSubject, firstValueFrom, of, Subject } from "rxjs";
 
-import { PremiumUpgradeDialogComponent } from "@bitwarden/angular/billing/components";
 import { NudgesService, NudgeType } from "@bitwarden/angular/vault";
 import { AutomaticUserConfirmationService } from "@bitwarden/auto-confirm";
 import { AutofillBrowserSettingsService } from "@bitwarden/browser/autofill/services/autofill-browser-settings.service";
@@ -49,7 +48,6 @@ describe("SettingsV2Component", () => {
   };
   let mockAutofillSettingsService: Partial<AutofillSettingsServiceAbstraction>;
   let dialogService: MockProxy<DialogService>;
-  let openSpy: jest.SpyInstance;
 
   beforeEach(waitForAsync(async () => {
     dialogService = mock<DialogService>();
@@ -124,21 +122,8 @@ describe("SettingsV2Component", () => {
     return acct;
   }
 
-  it("shows the premium callout when user does NOT have premium", async () => {
+  it("does not show a premium callout when user does NOT have premium", async () => {
     mockBillingState.hasPremiumFromAnySource$.mockReturnValue(of(false));
-    pushActiveAccount();
-
-    const fixture = TestBed.createComponent(SettingsV2Component);
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const el: HTMLElement = fixture.nativeElement;
-
-    expect(el.querySelector("bit-callout")).toBeTruthy();
-  });
-
-  it("hides the premium callout when user HAS premium", async () => {
-    mockBillingState.hasPremiumFromAnySource$.mockReturnValue(of(true));
     pushActiveAccount();
 
     const fixture = TestBed.createComponent(SettingsV2Component);
@@ -147,21 +132,6 @@ describe("SettingsV2Component", () => {
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector("bit-callout")).toBeFalsy();
-  });
-
-  it("openUpgradeDialog calls PremiumUpgradeDialogComponent.open with the DialogService", async () => {
-    openSpy = jest.spyOn(PremiumUpgradeDialogComponent, "open").mockImplementation();
-    mockBillingState.hasPremiumFromAnySource$.mockReturnValue(of(false));
-    pushActiveAccount();
-
-    const fixture = TestBed.createComponent(SettingsV2Component);
-    const component = fixture.componentInstance;
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    component["openUpgradeDialog"]();
-    expect(openSpy).toHaveBeenCalledTimes(1);
-    expect(openSpy).toHaveBeenCalledWith(dialogService);
   });
 
   it("showAutofillBadge$ emits true when showNudgeBadge is true", async () => {

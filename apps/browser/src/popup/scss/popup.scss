@@ -12,3 +12,8 @@ body {
 .cdk-virtual-scroll-content-wrapper {
   width: 100%;
 }
+
+// Hide the "Upgrade" premium badges, including those rendered by shared lib components
+app-premium-badge {
+  display: none !important;
+}
