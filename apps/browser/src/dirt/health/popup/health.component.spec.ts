@@ -71,7 +71,6 @@ class MockCurrentAccountComponent {}
 class MockHealthOverviewComponent {
   readonly report = input.required<VaultHealthReportView>();
   readonly locked = input(false);
-  readonly upgrade = output<void>();
 }
 
 @Component({
@@ -814,16 +813,6 @@ describe("HealthComponent", () => {
       expect(billingAccountProfileStateService.hasPremiumFromAnySource$).toHaveBeenCalledWith(
         userId,
       );
-    });
-
-    it("launches the upgrade flow when the Health Overview asks for it", async () => {
-      hasPremium$.next(false);
-      await initWithReport();
-
-      overview()!.upgrade.emit();
-      await settle();
-
-      expect(dialogService.open).toHaveBeenCalledTimes(1);
     });
 
     it("does not launch the upgrade flow on its own", async () => {

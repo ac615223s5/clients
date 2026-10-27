@@ -241,32 +241,8 @@ describe("HealthOverviewComponent", () => {
       expect(text()).toContain("yourVaultRiskIsHigh");
     });
 
-    it("shows the upgrade button below the categories", async () => {
+    it("does not show an upgrade button", async () => {
       await initComponent(report(), true);
-
-      const button = upgradeButton();
-      expect(button).not.toBeNull();
-      expect(button?.textContent).toContain("upgradeToViewPasswords");
-
-      // Below all three rows, per the design.
-      const rendered = Array.from(
-        fixture.nativeElement.querySelectorAll("dirt-risk-category-nav-item, button[bitButton]"),
-      );
-      expect(rendered.indexOf(button!)).toBe(rendered.length - 1);
-    });
-
-    it("emits upgrade when the button is pressed, leaving the launch to the Health tab root", async () => {
-      await initComponent(report(), true);
-      const emitted = jest.fn();
-      fixture.componentInstance.upgrade.subscribe(emitted);
-
-      upgradeButton()?.click();
-
-      expect(emitted).toHaveBeenCalledTimes(1);
-    });
-
-    it("does not show the upgrade button when unlocked", async () => {
-      await initComponent(report());
 
       expect(upgradeButton()).toBeNull();
     });

@@ -914,11 +914,6 @@ describe("VaultComponent", () => {
     }));
   });
 
-  it("showPremiumDialog opens PremiumUpgradeDialogComponent", () => {
-    component["showPremiumDialog"]();
-    expect(PremiumUpgradeDialogComponent.open).toHaveBeenCalledTimes(1);
-  });
-
   it("navigateToImport navigates to import route", fakeAsync(async () => {
     configSvc.getFeatureFlag.mockResolvedValue(false);
     const ngRouter = TestBed.inject(Router);
@@ -975,7 +970,7 @@ describe("VaultComponent", () => {
     expect(spy).toHaveBeenCalledWith(NudgeType.HasVaultItems, "user-xyz");
   }));
 
-  it("renders Premium spotlight when eligible and opens dialog on click", fakeAsync(() => {
+  it("never renders a Premium spotlight, even when eligible", fakeAsync(() => {
     activeAccount$.next({
       id: "user-1",
       creationDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -1002,20 +997,7 @@ describe("VaultComponent", () => {
 
     fixture.detectChanges();
 
-    const spotlights = Array.from(
-      fixture.nativeElement.querySelectorAll("bit-callout"),
-    ) as HTMLElement[];
-    expect(spotlights.length).toBe(1);
-
-    const spotDe = fixture.debugElement.query(By.css("bit-callout"));
-    expect(spotDe).toBeTruthy();
-
-    const button = spotDe.query(By.css("[slot='end']"));
-    button.nativeElement.click();
-
-    fixture.detectChanges();
-
-    expect(PremiumUpgradeDialogComponent.open).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.querySelector("bit-callout")).toBeNull();
   }));
 
   it("renders Empty-Vault spotlight when vaultState is Empty and nudge is on", fakeAsync(() => {
