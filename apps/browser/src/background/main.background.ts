@@ -367,13 +367,11 @@ import {
 } from "../autofill/fido2/services/browser-fido2-user-interface.service";
 import { AutofillLifecycleService } from "../autofill/services/abstractions/autofill-lifecycle.service";
 import { AutofillService as AutofillServiceAbstraction } from "../autofill/services/abstractions/autofill.service";
-import { FillCipherPolicy } from "../autofill/services/abstractions/fill-cipher-policy";
 import { AutofillBadgeUpdaterService } from "../autofill/services/autofill-badge-updater.service";
 import { DefaultAutofillLifecycleService } from "../autofill/services/autofill-lifecycle.service";
 import { AutofillTriageService } from "../autofill/services/autofill-triage.service";
 import AutofillService from "../autofill/services/autofill.service";
 import { ClipboardNotificationBadgeUpdaterService } from "../autofill/services/clipboard-notification-badge-updater.service";
-import { DefaultFillCipherPolicy } from "../autofill/services/default-fill-cipher-policy";
 import { InlineMenuFieldQualificationService } from "../autofill/services/inline-menu-field-qualification.service";
 import { TargetingRulesDataService } from "../autofill/services/targeting-rules-data.service";
 import { WebmapperDraftService } from "../autofill/services/webmapper-draft.service";
@@ -454,7 +452,6 @@ export default class MainBackground {
   environmentService: BrowserEnvironmentService;
   cipherSdkService: CipherSdkService;
   revealedCipherService: RevealedCipherService;
-  fillCipherPolicy: FillCipherPolicy;
   cipherService: CipherServiceAbstraction;
   folderService: InternalFolderServiceAbstraction;
   userDecryptionOptionsService: InternalUserDecryptionOptionsServiceAbstraction;
@@ -549,8 +546,8 @@ export default class MainBackground {
   // an erased annotation would leave the channel ambient
   readonly #intraprocessMessageSender: IntraprocessMessageSender;
   // Retained because `OverlayBackground` is constructed lazily, outside this constructor's scope.
-  // `private` suffices here: a listener only reads, so reaching it grants no way to publish.
-  private messageListener: MessageListener;
+  // Public, unlike the sender: a listener only reads, so reaching it grants no way to publish.
+  readonly messageListener: MessageListener;
   scriptInjectorService: BrowserScriptInjectorService;
   kdfConfigService: KdfConfigService;
   offscreenDocumentService: OffscreenDocumentService;
@@ -626,10 +623,13 @@ export default class MainBackground {
 
   /** @param overrides Services the commercial build supplies in place of the OSS defaults. */
   constructor(overrides?: {
-    fillCipherPolicy?: (deps: {
+    revealedCipherService?: (deps: {
+      stateProvider: StateProvider;
+      accountService: AccountServiceAbstraction;
+      authService: AuthServiceAbstraction;
       cipherService: CipherServiceAbstraction;
-      revealedCipherService: RevealedCipherService;
-    }) => FillCipherPolicy;
+      messageSender: MessageSender;
+    }) => RevealedCipherService;
   }) {
     // Downstream services receive this callback and invoke it directly instead of
     // going through LogoutService, so the log line that lives in DefaultLogoutService
@@ -990,7 +990,6 @@ export default class MainBackground {
       this.stateService,
       this.tokenService,
     );
-    this.revealedCipherService = new NoopRevealedCipherService();
 
     this.configApiService = new ConfigApiService(this.apiService);
 
@@ -1229,11 +1228,14 @@ export default class MainBackground {
       this.messagingService,
       this.cipherSdkService,
     );
-    this.fillCipherPolicy =
-      overrides?.fillCipherPolicy?.({
+    this.revealedCipherService =
+      overrides?.revealedCipherService?.({
+        stateProvider: this.stateProvider,
+        accountService: this.accountService,
+        authService: this.authService,
         cipherService: this.cipherService,
-        revealedCipherService: this.revealedCipherService,
-      }) ?? new DefaultFillCipherPolicy(this.cipherService);
+        messageSender: this.messagingService,
+      }) ?? new NoopRevealedCipherService();
     this.folderService = new FolderService(
       this.keyService,
       this.encryptService,
@@ -1379,12 +1381,12 @@ export default class MainBackground {
     this.autofillOrchestrator = new DefaultAutofillOrchestrator(
       this.autofillLifecycleService,
       this.autofillService,
+      this.cipherService,
       this.autofillSettingsService,
       this.accountService,
       this.platformUtilsService,
       () => this.updateOverlayCiphers(),
       this.logService,
-      this.fillCipherPolicy,
     );
     this.auditService = new AuditService(
       this.cryptoFunctionService,
@@ -1688,14 +1690,11 @@ export default class MainBackground {
       this.fido2Background,
       this.#intraprocessMessageSender,
       this.messageListener,
-      this.fillCipherPolicy,
     );
 
     this.overlayNotificationsBackground = new OverlayNotificationsBackground(
       this.logService,
       this.notificationBackground,
-      this.accountService,
-      this.fillCipherPolicy,
     );
 
     this.autoSubmitLoginBackground = new AutoSubmitLoginBackground(
@@ -1732,6 +1731,7 @@ export default class MainBackground {
       },
       (tabId, frameId) => this.autofillOrchestrator.collectAutofillTriage(tabId, frameId),
       this.authService,
+      this.cipherService,
       this.totpService,
       this.eventCollectionService,
       this.userVerificationService,
@@ -1739,7 +1739,6 @@ export default class MainBackground {
       this.autofillTriageService,
       new WebmapperDraftService(this.stateProvider),
       this.#intraprocessMessageSender,
-      this.fillCipherPolicy,
     );
 
     this.contextMenusBackground = new ContextMenusBackground(
@@ -1783,13 +1782,12 @@ export default class MainBackground {
       this.authService,
       this.cipherService,
       this.accountService,
-      this.fillCipherPolicy,
     );
 
     if (chrome.webRequest != null && chrome.webRequest.onAuthRequired != null) {
       this.webRequestBackground = new WebRequestBackground(
         this.platformUtilsService,
-        this.fillCipherPolicy,
+        this.cipherService,
         this.authService,
         this.accountService,
         chrome.webRequest,
@@ -2055,6 +2053,8 @@ export default class MainBackground {
         this.messagingService.send("locked", { userId: userId });
       } else {
         this.messagingService.send("unlocked", { userId: userId });
+        await this.refreshMenu();
+        await this.updateOverlayCiphers();
         await this.syncService.fullSync(false);
       }
     } finally {
@@ -2366,13 +2366,12 @@ export default class MainBackground {
       this.configService,
       this.#intraprocessMessageSender,
       this.messageListener,
-      this.fillCipherPolicy,
     );
 
     this.autofillBadgeUpdaterService = new AutofillBadgeUpdaterService(
       this.badgeService,
       this.accountService,
-      this.fillCipherPolicy,
+      this.cipherService,
       this.badgeSettingsService,
       this.logService,
     );
