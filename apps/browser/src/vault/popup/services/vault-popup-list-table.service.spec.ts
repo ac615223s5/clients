@@ -455,29 +455,25 @@ describe("VaultPopupListTableService", () => {
     };
 
     describe("resolved actions", () => {
-      it("fills autofill-section rows on click and offers View (not Autofill) in the menu", async () => {
+      it("shows the Fill button (not Autofill in the menu) for autofill-section rows", async () => {
         expect(autofillRow()).toMatchObject({
-          primaryAutofill: true,
-          showFillOnHover: true,
+          showFillButton: true,
           showLaunch: false,
           showAutofillInMenu: false,
-          showViewInMenu: true,
         });
       });
 
-      it("views favorites/all-items rows on click and offers Autofill (not View) in the menu", async () => {
+      it("offers Autofill in the menu (no Fill button) for favorites/all-items rows", async () => {
         expect(sectionRow("favorites")).toMatchObject({
-          primaryAutofill: false,
-          showFillOnHover: false,
+          showFillButton: false,
           showLaunch: true,
           showAutofillInMenu: true,
-          showViewInMenu: false,
         });
       });
 
-      it("never fills on click when the current URI is blocked", async () => {
+      it("hides the Fill button when the current URI is blocked", async () => {
         currentTabIsOnBlocklist$.next(true);
-        expect(autofillRow()).toMatchObject({ primaryAutofill: false, showFillOnHover: false });
+        expect(autofillRow()).toMatchObject({ showFillButton: false });
       });
     });
 
@@ -491,13 +487,12 @@ describe("VaultPopupListTableService", () => {
         return latestRows().find((r) => r._section === "allItems")!.actions;
       };
 
-      it("never autofills, even in the autofill section where a normal row would", async () => {
+      it("never offers Fill, even in the autofill section where a normal row would", async () => {
         currentTabIsOnBlocklist$.next(false);
 
-        expect(autofillRow()).toMatchObject({ primaryAutofill: true });
+        expect(autofillRow()).toMatchObject({ showFillButton: true });
         expect(gatedAutofillRow()).toMatchObject({
-          primaryAutofill: false,
-          showFillOnHover: false,
+          showFillButton: false,
           showAutofillInMenu: false,
           titleKey: expect.stringMatching(/^viewItemTitle/),
         });
@@ -517,9 +512,9 @@ describe("VaultPopupListTableService", () => {
     });
 
     describe("titleKey", () => {
-      it("uses the autofill title (named field when a username is present) for fill-on-click rows", async () => {
+      it("uses the view title (named field when a username is present) for autofill-section rows", async () => {
         jest.spyOn(CipherViewLikeUtils, "getLogin").mockReturnValue({ username: "user" } as any);
-        expect(autofillRow().titleKey).toBe("autofillTitleWithField");
+        expect(autofillRow().titleKey).toBe("viewItemTitleWithField");
       });
 
       it("uses the view title for view-on-click rows without a username field", async () => {
