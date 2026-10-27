@@ -132,12 +132,12 @@
           </button>
 
           <ng-container slot="end">
-            @if (showFillTextOnHover()) {
+            @if (showFillButton()) {
               <bit-item-action>
                 <button
                   type="button"
                   (click)="doAutofill(cipher)"
-                  class="tw-opacity-0 tw-text-primary-600 tw-font-semibold tw-px-2 tw-bg-transparent tw-border-0 group-hover/vault-item:tw-opacity-100 group-focus-within/vault-item:tw-opacity-100"
+                  class="tw-text-primary-600 tw-font-semibold tw-px-2 tw-bg-transparent tw-border-0"
                   bitTypography="body2"
                 >
                   {{ "fill" | i18n }}
@@ -159,7 +159,6 @@
             <app-item-more-options
               [cipher]="cipher"
               [showAutofill]="showAutofillInMenu()"
-              [showViewOption]="showViewInMenu()"
             ></app-item-more-options>
           </ng-container>
         </bit-item>

@@ -84,18 +84,18 @@ describe("VaultListItemsContainerComponent", () => {
       fixture.detectChanges();
     });
 
-    it("should show fill text on hover for autofill list items", () => {
+    it("should show fill button for autofill list items", () => {
       fixture.componentRef.setInput("isAutofillList", true);
       fixture.detectChanges();
 
-      expect(component.showFillTextOnHover()).toBe(true);
+      expect(component.showFillButton()).toBe(true);
     });
 
-    it("should not show fill text on hover for non-autofill list items", () => {
+    it("should not show fill button for non-autofill list items", () => {
       fixture.componentRef.setInput("isAutofillList", false);
       fixture.detectChanges();
 
-      expect(component.showFillTextOnHover()).toBe(false);
+      expect(component.showFillButton()).toBe(false);
     });
 
     it("should hide launch button for autofill list items", () => {
@@ -126,28 +126,26 @@ describe("VaultListItemsContainerComponent", () => {
       expect(component.showAutofillInMenu()).toBe(false);
     });
 
-    it("should show view in menu for autofill list items", () => {
+    it("should view, not autofill, on select for autofill list items", () => {
       fixture.componentRef.setInput("isAutofillList", true);
       fixture.detectChanges();
+      const onViewCipher = jest.spyOn(component, "onViewCipher").mockResolvedValue();
+      const doAutofill = jest.spyOn(component, "doAutofill").mockResolvedValue();
 
-      expect(component.showViewInMenu()).toBe(true);
+      void component.onCipherSelect(mockCipher);
+
+      expect(onViewCipher).toHaveBeenCalledWith(mockCipher);
+      expect(doAutofill).not.toHaveBeenCalled();
     });
 
-    it("should hide view in menu for non-autofill list items", () => {
-      fixture.componentRef.setInput("isAutofillList", false);
-      fixture.detectChanges();
-
-      expect(component.showViewInMenu()).toBe(false);
-    });
-
-    it("should autofill on select for autofill list items", () => {
+    it("should allow autofill for autofill list items", () => {
       fixture.componentRef.setInput("isAutofillList", true);
       fixture.detectChanges();
 
       expect(component.canAutofill()).toBe(true);
     });
 
-    it("should not autofill on select for non-autofill list items", () => {
+    it("should not allow autofill for non-autofill list items", () => {
       fixture.componentRef.setInput("isAutofillList", false);
       fixture.detectChanges();
 
@@ -160,7 +158,7 @@ describe("VaultListItemsContainerComponent", () => {
         fixture.detectChanges();
       });
 
-      it("should not autofill on select even when isAutofillList is true", () => {
+      it("should not allow autofill even when isAutofillList is true", () => {
         fixture.componentRef.setInput("isAutofillList", true);
         fixture.detectChanges();
 
@@ -170,14 +168,14 @@ describe("VaultListItemsContainerComponent", () => {
   });
 
   describe("cipherItemTitleKey", () => {
-    it("should return autofillTitle when canAutofill is true", () => {
+    it("should return viewItemTitle when canAutofill is true", () => {
       fixture.componentRef.setInput("isAutofillList", true);
       fixture.detectChanges();
 
       const titleKeyFn = component.cipherItemTitleKey();
       const result = titleKeyFn(mockCipher);
 
-      expect(result).toBe("autofillTitleWithField");
+      expect(result).toBe("viewItemTitleWithField");
     });
 
     it("should return viewItemTitle when canAutofill is false", () => {

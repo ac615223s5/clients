@@ -1498,7 +1498,7 @@ describe("VaultPopupListTableComponent", () => {
   });
 
   describe("onCipherSelect", () => {
-    it("autofills rows whose resolved action is fill-on-click", () => {
+    it("navigates to view and never autofills", () => {
       const doAutofill = jest
         .spyOn(component["listTableService"], "doAutofill")
         .mockResolvedValue();
@@ -1506,22 +1506,7 @@ describe("VaultPopupListTableComponent", () => {
         .spyOn(component["listTableService"], "viewCipher")
         .mockResolvedValue();
 
-      const row = { cipher: makeCipher(), actions: { primaryAutofill: true } } as any;
-      void component.onCipherSelect(row);
-
-      expect(doAutofill).toHaveBeenCalledWith(row.cipher);
-      expect(viewCipher).not.toHaveBeenCalled();
-    });
-
-    it("navigates to view for rows whose resolved action is view-on-click", () => {
-      const doAutofill = jest
-        .spyOn(component["listTableService"], "doAutofill")
-        .mockResolvedValue();
-      const viewCipher = jest
-        .spyOn(component["listTableService"], "viewCipher")
-        .mockResolvedValue();
-
-      const row = { cipher: makeCipher(), actions: { primaryAutofill: false } } as any;
+      const row = { cipher: makeCipher(), actions: { showFillButton: true } } as any;
       void component.onCipherSelect(row);
 
       expect(viewCipher).toHaveBeenCalledWith(row.cipher);

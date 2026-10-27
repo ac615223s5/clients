@@ -761,12 +761,10 @@ export class VaultPopupListTableComponent {
   }
 
   /**
-   * Primary click action for a row: autofill for autofill-section rows, otherwise navigate to view.
+   * Primary click action for a row: always navigate to view. Autofill has its own "Fill" button.
    */
   onCipherSelect(row: VaultTableRow) {
-    return row.actions.primaryAutofill
-      ? this.listTableService.doAutofill(row.cipher)
-      : this.listTableService.viewCipher(row.cipher);
+    return this.listTableService.viewCipher(row.cipher);
   }
 
   launchCipher(cipher: CipherViewLike) {

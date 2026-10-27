@@ -231,9 +231,8 @@ export class VaultListItemsContainerComponent {
     return (cipher: CipherViewLike) => {
       const login = CipherViewLikeUtils.getLogin(cipher);
       const hasUsername = login?.username != null;
-      // Use autofill title when autofill is the primary action
-      const key = this.canAutofill() ? "autofillTitle" : "viewItemTitle";
-      return hasUsername ? `${key}WithField` : key;
+      // Clicking an item always opens it; autofill is a separate button
+      return hasUsername ? "viewItemTitleWithField" : "viewItemTitle";
     };
   });
 
@@ -248,9 +247,9 @@ export class VaultListItemsContainerComponent {
   readonly canAutofill = computed(() => !this.currentUriIsBlocked() && this.isAutofillList());
 
   /**
-   * Whether to show the "Fill" text on hover.
+   * Whether to show the "Fill" button.
    */
-  readonly showFillTextOnHover = computed(() => this.canAutofill());
+  readonly showFillButton = computed(() => this.canAutofill());
 
   /**
    * Whether to show the launch button.
@@ -261,11 +260,6 @@ export class VaultListItemsContainerComponent {
    * Whether to show the "Autofill" option in the more options menu.
    */
   readonly showAutofillInMenu = computed(() => !this.canAutofill());
-
-  /**
-   * Whether to show the "View" option in the more options menu (since click = autofill).
-   */
-  readonly showViewInMenu = computed(() => this.isAutofillList());
 
   /**
    * Remove the bottom margin from the bit-section in this component
@@ -301,7 +295,7 @@ export class VaultListItemsContainerComponent {
   ) {}
 
   onCipherSelect(cipher: PopupCipherViewLike) {
-    return this.canAutofill() ? this.doAutofill(cipher) : this.onViewCipher(cipher);
+    return this.onViewCipher(cipher);
   }
 
   /**

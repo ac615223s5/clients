@@ -60,18 +60,14 @@ export type VaultSection = "autofill" | "favorites" | "allItems";
  * blocklist branching lives in one testable place.
  */
 export interface VaultRowActions {
-  /** Whether clicking the row autofills (vs. navigating to view). */
-  primaryAutofill: boolean;
-  /** Reveal the "Fill" text on hover. */
-  showFillOnHover: boolean;
+  /** Show the "Fill" button. Clicking the row itself always navigates to view. */
+  showFillButton: boolean;
   /** Show the launch-in-new-tab button (still gated on the cipher being launchable). */
   showLaunch: boolean;
   /** Show the quick copy actions. */
   showCopyActions: boolean;
   /** Offer "Autofill" in the more-options menu. */
   showAutofillInMenu: boolean;
-  /** Offer "View" in the more-options menu. */
-  showViewInMenu: boolean;
   /** Resolved i18n key for the row's accessible title. */
   titleKey: string;
 }
@@ -297,21 +293,18 @@ export class VaultPopupListTableService {
     // revealed: the server withholds its credentials.
     const gated = RestrictedCipherPolicy.isRestricted(cipher as CipherViewLike);
 
-    // Whether clicking the row autofills: the autofill section fills unless the URI is blocked.
-    const primaryAutofill = !gated && isAutofill && !currentUriIsBlocked;
+    // The autofill section offers a "Fill" button unless the URI is blocked.
+    const showFillButton = !gated && isAutofill && !currentUriIsBlocked;
 
     const login = CipherViewLikeUtils.getLogin(cipher as CipherViewLike);
-    const titleBase = primaryAutofill ? "autofillTitle" : "viewItemTitle";
 
     return {
-      primaryAutofill,
-      showFillOnHover: primaryAutofill,
+      showFillButton,
       showLaunch: !isAutofill && !gated,
       showCopyActions: !gated,
-      showAutofillInMenu: !gated && !primaryAutofill,
-      showViewInMenu: primaryAutofill,
+      showAutofillInMenu: !gated && !showFillButton,
       // Name the login's username field in the label when it has one.
-      titleKey: login?.username != null ? `${titleBase}WithField` : titleBase,
+      titleKey: login?.username != null ? "viewItemTitleWithField" : "viewItemTitle",
     };
   }
 

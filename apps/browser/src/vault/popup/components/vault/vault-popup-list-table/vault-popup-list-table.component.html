@@ -195,11 +195,11 @@
         </div>
       </button>
       <div slot="end" class="tw-flex tw-items-center tw-shrink-0 tw-relative tw-z-10">
-        @if (row.actions.showFillOnHover) {
+        @if (row.actions.showFillButton) {
           <button
             type="button"
             (click)="doAutofill(row.cipher)"
-            class="tw-text-primary-600 tw-font-semibold tw-px-2 tw-bg-transparent tw-border-0 tw-opacity-0 group-hover/row:tw-opacity-100 group-focus-within/row:tw-opacity-100"
+            class="tw-text-primary-600 tw-font-semibold tw-px-2 tw-bg-transparent tw-border-0"
             bitTypography="body2"
           >
             {{ "fill" | i18n }}
@@ -220,7 +220,6 @@
         <app-item-more-options
           [cipher]="row.cipher"
           [showAutofill]="row.actions.showAutofillInMenu"
-          [showViewOption]="row.actions.showViewInMenu"
         ></app-item-more-options>
       </div>
     </bit-cell>
