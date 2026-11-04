@@ -358,6 +358,8 @@ export class CipherViewLikeUtils {
         return !!cipher.identity?.phone;
       case "address":
         return !!cipher.identity?.fullAddressForCopy;
+      case "postalCode":
+        return !!cipher.identity?.postalCode;
       case "secureNote":
         return !!cipher.notes;
       case "privateKey":
@@ -507,6 +509,9 @@ const copyActionToCopyableFieldMap: Record<string, CopyableCipherFields> = {
   email: "IdentityEmail",
   phone: "IdentityPhone",
   address: "IdentityAddress",
+  // List views only expose whether any address field is set, so the postal code is offered
+  // whenever there is an address. An empty postal code is caught when copying.
+  postalCode: "IdentityAddress",
   secureNote: "SecureNotes",
   privateKey: "SshKey",
   publicKey: "SshKey",

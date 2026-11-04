@@ -29,6 +29,7 @@ export type CopyAction =
   | "email"
   | "phone"
   | "address"
+  | "postalCode"
   | "secureNote"
   | "hiddenField"
   | "privateKey"
@@ -90,6 +91,7 @@ const CopyActions: Record<CopyAction, CopyActionInfo> = {
   email: { typeI18nKey: "email", protected: true },
   phone: { typeI18nKey: "phone", protected: true },
   address: { typeI18nKey: "address", protected: true },
+  postalCode: { typeI18nKey: "zipPostalCode", protected: true },
   secureNote: { typeI18nKey: "typeSecureNote", protected: true },
   privateKey: { typeI18nKey: "sshPrivateKey", protected: true },
   publicKey: { typeI18nKey: "sshPublicKey", protected: true },

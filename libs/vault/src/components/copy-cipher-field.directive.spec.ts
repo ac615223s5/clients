@@ -186,13 +186,15 @@ describe("CopyCipherFieldDirective", () => {
       cipher.identity.email = "test-email";
       cipher.identity.phone = "test-phone";
       cipher.identity.address1 = "test-address-1";
+      cipher.identity.postalCode = "test-postal-code";
     });
 
     it.each([
       ["username", "test-username"],
       ["email", "test-email"],
       ["phone", "test-phone"],
-      ["address", "test-address-1"],
+      ["address", "test-address-1\n-, test-postal-code"],
+      ["postalCode", "test-postal-code"],
     ])("copies %s field from identity to clipboard", async (action, value) => {
       copyCipherFieldDirective.action = action as CopyCipherFieldDirective["action"];
 

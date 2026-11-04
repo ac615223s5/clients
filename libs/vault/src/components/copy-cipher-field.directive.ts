@@ -158,6 +158,8 @@ export class CopyCipherFieldDirective implements OnChanges {
         return _cipher.identity?.phone;
       case "address":
         return _cipher.identity?.fullAddressForCopy;
+      case "postalCode":
+        return _cipher.identity?.postalCode;
       case "secureNote":
         return _cipher.notes;
       case "privateKey":

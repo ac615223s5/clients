@@ -187,5 +187,23 @@ describe("ViewIdentitySectionsComponent", () => {
 
       expect(textarea.nativeElement.rows).toBe(2);
     });
+
+    it("shows the copy postal code button only when a postal code is set", () => {
+      const query = () => fixture.debugElement.query(By.css('[data-testid="copy-postal-code"]'));
+
+      component.cipher = {
+        identity: { address1: "2920 Zoo Dr" },
+      } as CipherView;
+      fixture.detectChanges();
+
+      expect(query()).toBeNull();
+
+      component.cipher = {
+        identity: { address1: "2920 Zoo Dr", postalCode: "92101" },
+      } as CipherView;
+      fixture.detectChanges();
+
+      expect(query()).not.toBeNull();
+    });
   });
 });

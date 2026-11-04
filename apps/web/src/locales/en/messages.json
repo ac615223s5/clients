@@ -1737,6 +1737,9 @@
   "copyAddress": {
     "message": "Copy address"
   },
+  "copyPostalCode": {
+    "message": "Copy postal code"
+  },
   "copyBirthPlace": {
     "message": "Copy birth place"
   },
