@@ -81,6 +81,7 @@ export class VaultItemCopyActionsComponent {
   get singleCopyableIdentity() {
     const identityItems: CipherItem[] = [
       { key: "copyAddress", field: "address" },
+      { key: "copyPostalCode", field: "postalCode" },
       { key: "copyEmail", field: "email" },
       { key: "copyUsername", field: "username" },
       { key: "copyPhone", field: "phone" },

@@ -222,6 +222,18 @@
             readonly
             data-testid="address"
           ></textarea>
+          @if (cipher.identity.postalCode) {
+            <button
+              type="button"
+              bitIconButton="bwi-hashtag"
+              bitSuffix
+              [label]="'copyPostalCode' | i18n"
+              [appCopyClick]="cipher.identity.postalCode"
+              showToast
+              [valueLabel]="'zipPostalCode' | i18n"
+              data-testid="copy-postal-code"
+            ></button>
+          }
           <button
             type="button"
             bitIconButton="bwi-clone"

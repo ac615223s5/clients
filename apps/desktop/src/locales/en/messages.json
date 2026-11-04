@@ -2271,6 +2271,9 @@
   "copyAddress": {
     "message": "Copy address"
   },
+  "copyPostalCode": {
+    "message": "Copy postal code"
+  },
   "copyPhone": {
     "message": "Copy phone"
   },
