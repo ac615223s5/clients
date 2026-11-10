@@ -95,6 +95,45 @@ describe("RestrictedItemTypesService", () => {
     ]);
   });
 
+  it("reads the { restrictedTypes } data shape", async () => {
+    organizationService.organizations$.mockReturnValue(of([org1, org2]));
+    policyService.policiesByType$.mockReturnValue(
+      of([
+        {
+          ...policyOrg1,
+          data: { restrictedTypes: [CipherType.Card, CipherType.BankAccount] },
+        } as Policy,
+      ]),
+    );
+
+    const result = await firstValueFrom(service.restricted$);
+    expect(result).toEqual<RestrictedCipherType[]>([
+      { cipherType: CipherType.Card, allowViewOrgIds: ["org2"] },
+      { cipherType: CipherType.BankAccount, allowViewOrgIds: ["org2"] },
+    ]);
+  });
+
+  it("restricts nothing for an empty { restrictedTypes } list", async () => {
+    policyService.policiesByType$.mockReturnValue(
+      of([{ ...policyOrg1, data: { restrictedTypes: [] } } as Policy]),
+    );
+
+    const result = await firstValueFrom(service.restricted$);
+    expect(result).toEqual([]);
+  });
+
+  it("does not throw on unreadable data and falls back to [Card]", async () => {
+    organizationService.organizations$.mockReturnValue(of([org1]));
+    policyService.policiesByType$.mockReturnValue(
+      of([{ ...policyOrg1, data: { unexpected: true } } as Policy]),
+    );
+
+    const result = await firstValueFrom(service.restricted$);
+    expect(result).toEqual<RestrictedCipherType[]>([
+      { cipherType: CipherType.Card, allowViewOrgIds: [] },
+    ]);
+  });
+
   it("if one org restricts Card and another has no policy, allowViewOrgIds contains the unrestricted org", async () => {
     policyService.policiesByType$.mockReturnValue(of([policyOrg1]));
 
