@@ -4,8 +4,9 @@ import { BehaviorSubject } from "rxjs";
 import { I18nService } from "@bitwarden/common/platform/abstractions/i18n.service";
 import { CipherViewLike } from "@bitwarden/common/vault/utils/cipher-view-like-utils";
 
+import { BrowserVaultRowAccessService } from "./browser-vault-row-access.service";
 import { VaultRowAccessIconComponent } from "./vault-row-access-icon.component";
-import { VAULT_ROW_ACCESS, VaultRowAccessStatus } from "./vault-row-access.token";
+import { VaultRowAccessStatus } from "./vault-row-access-status";
 
 describe("VaultRowAccessIconComponent", () => {
   let fixture: ComponentFixture<VaultRowAccessIconComponent>;
@@ -18,19 +19,19 @@ describe("VaultRowAccessIconComponent", () => {
     return icon == null ? [] : Array.from(icon.classList);
   }
 
-  async function setup(provide = true) {
+  beforeEach(async () => {
     status$ = new BehaviorSubject<VaultRowAccessStatus | null>(null);
     await TestBed.configureTestingModule({
       imports: [VaultRowAccessIconComponent],
       providers: [
         { provide: I18nService, useValue: { t: (k: string) => k } },
-        ...(provide ? [{ provide: VAULT_ROW_ACCESS, useValue: { status$: () => status$ } }] : []),
+        { provide: BrowserVaultRowAccessService, useValue: { status$: () => status$ } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(VaultRowAccessIconComponent);
     fixture.componentRef.setInput("cipher", cipher);
     fixture.detectChanges();
-  }
+  });
 
   it.each([
     ["request", "bwi-lock-encrypted"],
@@ -38,33 +39,21 @@ describe("VaultRowAccessIconComponent", () => {
     ["pending", "bwi-clock"],
     ["ready", "bwi-lock"],
     ["active", "bwi-unlock"],
-  ] as const)("shows %s as %s", async (kind, icon) => {
-    await setup();
-
+  ] as const)("shows %s as %s", (kind, icon) => {
     status$.next({ kind, label: kind, canExtend: false });
     fixture.detectChanges();
 
     expect(iconClasses()).toContain(icon);
   });
 
-  it("titles the icon Privileged", async () => {
-    await setup();
-
+  it("titles the icon Privileged", () => {
     status$.next({ kind: "request", label: "request", canExtend: false });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector("bit-icon").title).toBe("pamAccessBadgePrivileged");
   });
 
-  it("renders nothing for an item privileged control does not govern", async () => {
-    await setup();
-
-    expect(iconClasses()).toEqual([]);
-  });
-
-  it("renders nothing when no host provides row access", async () => {
-    await setup(false);
-
+  it("renders nothing for an item privileged control does not govern", () => {
     expect(iconClasses()).toEqual([]);
   });
 });

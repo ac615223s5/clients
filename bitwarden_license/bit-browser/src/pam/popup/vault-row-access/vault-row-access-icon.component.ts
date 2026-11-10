@@ -6,15 +6,17 @@ import { CipherViewLike } from "@bitwarden/common/vault/utils/cipher-view-like-u
 import { BitwardenIcon, IconComponent } from "@bitwarden/components";
 import { I18nPipe } from "@bitwarden/ui-common";
 
-import { VAULT_ROW_ACCESS, VaultRowAccess, VaultRowAccessStatus } from "./vault-row-access.token";
+import { BrowserVaultRowAccessService } from "./browser-vault-row-access.service";
+import { VaultRowAccessStatus } from "./vault-row-access-status";
 
 /**
- * The privileged-control status icon in a popup row's name line: the privileged-control lock for a request
- * or unavailable item, a clock while pending, a closed lock when ready and an open lock in use.
- * Renders nothing for an item privileged control does not govern.
+ * Binds `VAULT_ROW_ICON`: the privileged-control status icon in a popup row's name line. The
+ * privileged-control lock for a request or unavailable item, a clock while pending, a closed lock
+ * when ready and an open lock in use. Renders nothing for an item privileged control does not
+ * govern.
  */
 @Component({
-  selector: "app-vault-row-access-icon",
+  selector: "pam-vault-row-access-icon",
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, I18nPipe],
   // `tw-block`: inline, the icon would sit on a line of the row's font and outgrow the name.
@@ -33,13 +35,11 @@ import { VAULT_ROW_ACCESS, VaultRowAccess, VaultRowAccessStatus } from "./vault-
 export class VaultRowAccessIconComponent {
   readonly cipher = input<CipherViewLike | null>(null);
 
-  private readonly access: VaultRowAccess | null = inject(VAULT_ROW_ACCESS, { optional: true });
+  private readonly rowAccess = inject(BrowserVaultRowAccessService);
 
   protected readonly status = toSignal(
     toObservable(this.cipher).pipe(
-      switchMap((cipher) =>
-        cipher == null || this.access == null ? of(null) : this.access.status$(cipher),
-      ),
+      switchMap((cipher) => (cipher == null ? of(null) : this.rowAccess.status$(cipher))),
     ),
     { initialValue: null as VaultRowAccessStatus | null },
   );
