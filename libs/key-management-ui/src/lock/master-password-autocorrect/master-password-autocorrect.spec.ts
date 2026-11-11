@@ -43,3 +43,23 @@ describe("masterPasswordAutocorrectCandidates with common English words", () => 
     expect(masterPasswordAutocorrectCandidates("she wnet running")).toContain("she went running");
   });
 });
+
+describe("masterPasswordAutocorrectCandidates with a mistimed space", () => {
+  it.each([
+    // Space too early: a word's last character moves to the start of the next word.
+    ["correc thorse battery", "correct horse battery"],
+    ["the quic kbrown fox", "the quick brown fox"],
+    ["i love m ydog", "i love my dog"],
+    // Space too late: a word's first character moves to the end of the previous word.
+    ["correcth orse battery", "correct horse battery"],
+    ["the quickb rown fox", "the quick brown fox"],
+    ["i lovem y dog", "i love my dog"],
+    // Both sides of one word, and combined with another typo or capitals.
+    ["correc thorseb attery", "correct horse battery"],
+    ["the quic kbrownf ox", "the quick brown fox"],
+    ["correc thorse batrery", "correct horse battery"],
+    ["Correc tHorse Battery", "Correct Horse Battery"],
+  ])("ranks the intended passphrase first for %s", (typed, intended) => {
+    expect(masterPasswordAutocorrectCandidates(typed)[0]).toBe(intended);
+  });
+});

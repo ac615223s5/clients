@@ -28,6 +28,8 @@ const NOT_ADJACENT_SUBSTITUTION = 3; // delete (1) + insert (2)
 interface PartialPassphrase {
   words: string[];
   cost: number;
+  /** The separator before the next word was already consumed (by a mistimed space). */
+  separated: boolean;
 }
 
 interface WordMatch {
@@ -76,29 +78,26 @@ function buildDictionary(wordlist: readonly string[]): Dictionary {
 }
 
 /**
- * Finds every dictionary word within `limit` typos of `typed.slice(start, end)`, for
- * every `end` up to `maxEnd`, in a single trie walk. The per-word cost is a fast
- * approximation of `countTypos`: weighted Damerau-Levenshtein using the same costs,
- * with only adjacent transpositions as moves. Case-insensitive.
+ * Finds every dictionary word within `limit` typos of each prefix of `text`, in a
+ * single trie walk. The per-word cost is a fast approximation of `countTypos`:
+ * weighted Damerau-Levenshtein using the same costs, with only adjacent
+ * transpositions as moves. `text` must be lowercase.
  *
- * Returns matches grouped by `end`.
+ * Returns matches grouped by prefix length.
  */
-function matchWordsFrom(
+function matchWordPrefixes(
   dictionary: Dictionary,
-  typedLower: string,
-  start: number,
-  maxEnd: number,
-  cheapIns: boolean[],
+  text: string,
+  insertCosts: number[],
   limit: number,
 ): Map<number, WordMatch[]> {
-  const cols = maxEnd - start + 1;
-  const insertCost = (j: number) => (cheapIns[start + j - 1] ? 1 : 2);
+  const cols = text.length + 1;
   const results = new Map<number, WordMatch[]>();
 
   const firstRow: number[] = new Array(cols);
   firstRow[0] = 0;
   for (let j = 1; j < cols; j++) {
-    firstRow[j] = firstRow[j - 1] + insertCost(j);
+    firstRow[j] = firstRow[j - 1] + insertCosts[j - 1];
   }
 
   const visit = (
@@ -112,19 +111,13 @@ function matchWordsFrom(
     row[0] = prev[0] + 1;
     let rowMin = row[0];
     for (let j = 1; j < cols; j++) {
-      const t = typedLower[start + j - 1];
+      const t = text[j - 1];
       let best = Math.min(
         prev[j] + 1, // delete
-        row[j - 1] + insertCost(j), // insert
+        row[j - 1] + insertCosts[j - 1], // insert
         prev[j - 1] + (r === t ? 0 : isAdjacent(r, t) ? 1 : NOT_ADJACENT_SUBSTITUTION),
       );
-      if (
-        prevPrev &&
-        j > 1 &&
-        r === typedLower[start + j - 2] &&
-        prevR === t &&
-        prevPrev[j - 2] + 1 < best
-      ) {
+      if (prevPrev && j > 1 && r === text[j - 2] && prevR === t && prevPrev[j - 2] + 1 < best) {
         best = prevPrev[j - 2] + 1; // swapped neighbours
       }
       row[j] = best;
@@ -136,9 +129,9 @@ function matchWordsFrom(
     if (node.word) {
       for (let j = 1; j < cols; j++) {
         if (row[j] <= limit) {
-          const matches = results.get(start + j) ?? [];
+          const matches = results.get(j) ?? [];
           matches.push({ word: node.word, cost: row[j] });
-          results.set(start + j, matches);
+          results.set(j, matches);
         }
       }
     }
@@ -151,6 +144,10 @@ function matchWordsFrom(
     visit(child, ch, undefined, firstRow, undefined);
   }
   return results;
+}
+
+function range(from: number, to: number): number[] {
+  return Array.from({ length: Math.max(0, to - from) }, (_, k) => from + k);
 }
 
 /** Copies the capitalisation style of the typed segment onto a dictionary word. */
@@ -195,44 +192,76 @@ export function masterPasswordAutocorrectCandidates(
   const typedLower = typed.toLowerCase();
   const cheapIns = cheapInsertMask(typed, TYPO_MOVE_DISTANCE);
 
-  const startCache = new Map<number, Map<number, WordMatch[]>>();
-  const matchesFrom = (start: number): Map<number, WordMatch[]> => {
-    let byEnd = startCache.get(start);
-    if (!byEnd) {
-      const maxEnd = Math.min(n, start + dictionary.maxLength + maxWordTypos);
-      byEnd = new Map();
-      for (const [end, matches] of matchWordsFrom(
+  const window = dictionary.maxLength + maxWordTypos;
+
+  // Matches words against the typed characters at `indices` (usually contiguous, but a
+  // mistimed space moves one character across a word boundary). Keyed by how many of
+  // the indices the word consumed.
+  const indexCache = new Map<string, Map<number, WordMatch[]>>();
+  const matchIndices = (indices: number[]): Map<number, WordMatch[]> => {
+    const key = indices.join(",");
+    let byLength = indexCache.get(key);
+    if (!byLength) {
+      byLength = new Map();
+      const text = indices.map((i) => typedLower[i]).join("");
+      const insertCosts = indices.map((i) => (cheapIns[i] ? 1 : 2));
+      for (const [length, matches] of matchWordPrefixes(
         dictionary,
-        typedLower,
-        start,
-        maxEnd,
-        cheapIns,
+        text,
+        insertCosts,
         maxWordTypos,
       )) {
-        const segment = typed.slice(start, end);
-        byEnd.set(
-          end,
+        const segment = indices
+          .slice(0, length)
+          .map((i) => typed[i])
+          .join("");
+        byLength.set(
+          length,
           matches
             .sort((a, b) => a.cost - b.cost)
             .slice(0, beamWidth)
             .map((m) => ({ word: matchCase(m.word, segment), cost: m.cost })),
         );
       }
-      startCache.set(start, byEnd);
+      indexCache.set(key, byLength);
     }
-    return byEnd;
+    return byLength;
   };
 
   // beams[pos]: best word sequences whose typed span ends exactly at `pos`.
   const beams: PartialPassphrase[][] = Array.from({ length: n + 1 }, (): PartialPassphrase[] => []);
-  beams[0].push({ words: [], cost: 0 });
+  beams[0].push({ words: [], cost: 0, separated: true });
+
+  const extend = (
+    partial: PartialPassphrase,
+    indices: number[],
+    extraCost: number,
+    landing: (length: number) => { end: number; separated: boolean } | undefined,
+  ) => {
+    for (const [length, matches] of matchIndices(indices)) {
+      const target = landing(length);
+      if (!target) {
+        continue;
+      }
+      for (const { word, cost } of matches) {
+        const total = partial.cost + extraCost + cost;
+        if (total <= maxTotalTypos) {
+          beams[target.end].push({
+            words: [...partial.words, word],
+            cost: total,
+            separated: target.separated,
+          });
+        }
+      }
+    }
+  };
 
   for (let pos = 0; pos < n; pos++) {
     beams[pos] = pruneBeam(beams[pos], beamWidth);
     for (const partial of beams[pos]) {
       let start = pos;
       let separatorCost = 0;
-      if (partial.words.length > 0) {
+      if (!partial.separated) {
         if (typed[pos] === " ") {
           start = pos + 1;
         } else {
@@ -242,13 +271,26 @@ export function masterPasswordAutocorrectCandidates(
       if (start >= n) {
         continue;
       }
-      for (const [end, matches] of matchesFrom(start)) {
-        for (const { word, cost } of matches) {
-          const total = partial.cost + separatorCost + cost;
-          if (total <= maxTotalTypos) {
-            beams[end].push({ words: [...partial.words, word], cost: total });
-          }
-        }
+
+      const indices = range(start, Math.min(n, start + window));
+      extend(partial, indices, separatorCost, (length) => ({
+        end: start + length,
+        separated: false,
+      }));
+
+      // Space typed one character early: the word's last character follows the space.
+      const space = typed.indexOf(" ", start + 1);
+      if (space !== -1 && space + 1 < n && space - start < window) {
+        const shifted = [...range(start, space), space + 1];
+        extend(partial, shifted, separatorCost + 1, (length) =>
+          length === shifted.length ? { end: space + 2, separated: true } : undefined,
+        );
+      }
+
+      // Space typed one character late: the previous word took this word's first character.
+      if (!partial.separated && typed[pos] !== " " && typed[pos + 1] === " ") {
+        const shifted = [pos, ...range(pos + 2, Math.min(n, pos + 1 + window))];
+        extend(partial, shifted, 1, (length) => ({ end: pos + 1 + length, separated: false }));
       }
     }
   }
@@ -279,7 +321,7 @@ function pruneBeam(beam: PartialPassphrase[], width: number): PartialPassphrase[
   return [...beam]
     .sort((a, b) => a.cost - b.cost)
     .filter((p) => {
-      const key = p.words.join(" ");
+      const key = `${p.separated}:${p.words.join(" ")}`;
       if (seen.has(key)) {
         return false;
       }
