@@ -2073,6 +2073,9 @@
   "invalidMasterPassword": {
     "message": "Invalid master password"
   },
+  "masterPasswordAutocorrected": {
+    "message": "Your master password had a typo, so a corrected version was used to unlock."
+  },
   "invalidMasterPasswordConfirmEmailAndHost": {
     "message": "Invalid master password. Confirm your email is correct and your account was created on $HOST$.",
     "placeholders": {

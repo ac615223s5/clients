@@ -22,6 +22,7 @@ import { CommandDefinition, MessageListener } from "@bitwarden/messaging";
 import { UnlockService } from "@bitwarden/unlock";
 import { UserId } from "@bitwarden/user-core";
 
+import { masterPasswordAutocorrectCandidates } from "../../master-password-autocorrect/master-password-autocorrect";
 import { UnlockOptions } from "../../services/lock-component.service";
 import { UnlockViaPrfComponent } from "../unlock-via-prf.component";
 
@@ -121,7 +122,13 @@ export class MasterPasswordLockComponent implements OnInit, OnDestroy {
     activeUserId: UserId,
   ): Promise<void> {
     try {
-      await this.unlockService.unlockWithMasterPassword(activeUserId, masterPassword);
+      const unlockedWith =
+        (await this.tryUnlockWithMasterPassword(masterPassword, activeUserId)) ??
+        (await this.tryUnlockWithAutocorrectedMasterPassword(masterPassword, activeUserId));
+      if (unlockedWith == null) {
+        throw Error("Invalid master password");
+      }
+
       const userKey = await firstValueFrom(this.keyService.userKey$(activeUserId));
       if (!userKey) {
         this.logService.error(
@@ -129,7 +136,7 @@ export class MasterPasswordLockComponent implements OnInit, OnDestroy {
         );
         throw Error("Failed to retrieve user key");
       }
-      this.successfulUnlock.emit({ userKey: userKey, masterPassword });
+      this.successfulUnlock.emit({ userKey: userKey, masterPassword: unlockedWith });
     } catch (error) {
       this.logService.error(
         "[MasterPasswordLockComponent] Failed to unlock via master password",
@@ -140,6 +147,44 @@ export class MasterPasswordLockComponent implements OnInit, OnDestroy {
         title: this.i18nService.t("errorOccurred"),
         message: this.i18nService.t("invalidMasterPassword"),
       });
+    }
+  }
+
+  /**
+   * If the typed password looks like a mistyped passphrase, tries up to 5 of the
+   * nearest word sequences. Unlock is verified locally, so these attempts never
+   * reach the server. Returns the password that worked, otherwise `null`.
+   */
+  private async tryUnlockWithAutocorrectedMasterPassword(
+    typedMasterPassword: string,
+    activeUserId: UserId,
+  ): Promise<string | null> {
+    for (const candidate of masterPasswordAutocorrectCandidates(typedMasterPassword)) {
+      if ((await this.tryUnlockWithMasterPassword(candidate, activeUserId)) != null) {
+        this.toastService.showToast({
+          variant: "info",
+          message: this.i18nService.t("masterPasswordAutocorrected"),
+        });
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  /** Returns the password if it unlocked the vault, otherwise `null`. */
+  private async tryUnlockWithMasterPassword(
+    masterPassword: string,
+    activeUserId: UserId,
+  ): Promise<string | null> {
+    try {
+      await this.unlockService.unlockWithMasterPassword(activeUserId, masterPassword);
+      return masterPassword;
+    } catch (error) {
+      this.logService.error(
+        "[MasterPasswordLockComponent] Master password unlock attempt failed",
+        error,
+      );
+      return null;
     }
   }
 

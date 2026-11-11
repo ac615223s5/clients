@@ -550,9 +550,73 @@ describe("MasterPasswordLockComponent", () => {
         message: i18nService.t("invalidMasterPassword"),
       });
       expect(logService.error).toHaveBeenCalledWith(
-        "[MasterPasswordLockComponent] Failed to unlock via master password",
+        "[MasterPasswordLockComponent] Master password unlock attempt failed",
         customError,
       );
+    });
+
+    describe("autocorrect", () => {
+      const typedPassphrase = "correct staple batrery";
+      const intendedPassphrase = "correct staple battery";
+
+      beforeEach(() => {
+        keyService.userKey$.mockReturnValue(of(mockUserKey));
+        accountService.activeAccount$ = of(activeAccount);
+      });
+
+      it("unlocks with a corrected passphrase and tells the user", async () => {
+        unlockService.unlockWithMasterPassword.mockImplementation(async (_, password) => {
+          if (password !== intendedPassphrase) {
+            throw new Error("Invalid master password");
+          }
+        });
+        component.formGroup.controls.masterPassword.setValue(typedPassphrase);
+        let emittedEvent: { userKey: UserKey; masterPassword: string } | undefined;
+        component.successfulUnlock.subscribe((event) => (emittedEvent = event));
+
+        await component.submit();
+
+        expect(unlockService.unlockWithMasterPassword).toHaveBeenNthCalledWith(
+          1,
+          activeAccount.id,
+          typedPassphrase,
+        );
+        expect(unlockService.unlockWithMasterPassword).toHaveBeenCalledWith(
+          activeAccount.id,
+          intendedPassphrase,
+        );
+        expect(unlockService.unlockWithMasterPassword.mock.calls.length).toBeLessThanOrEqual(6);
+        expect(emittedEvent?.masterPassword).toEqual(intendedPassphrase);
+        expect(toastService.showToast).toHaveBeenCalledWith({
+          variant: "info",
+          message: i18nService.t("masterPasswordAutocorrected"),
+        });
+      });
+
+      it("tries at most 5 corrections before reporting an invalid password", async () => {
+        unlockService.unlockWithMasterPassword.mockRejectedValue(new Error("Invalid"));
+        component.formGroup.controls.masterPassword.setValue(typedPassphrase);
+
+        await component.submit();
+
+        const calls = unlockService.unlockWithMasterPassword.mock.calls.length;
+        expect(calls).toBeGreaterThan(1);
+        expect(calls).toBeLessThanOrEqual(6);
+        expect(toastService.showToast).toHaveBeenCalledWith({
+          variant: "error",
+          title: i18nService.t("errorOccurred"),
+          message: i18nService.t("invalidMasterPassword"),
+        });
+      });
+
+      it("does not retry passwords that are not near a word sequence", async () => {
+        unlockService.unlockWithMasterPassword.mockRejectedValue(new Error("Invalid"));
+        component.formGroup.controls.masterPassword.setValue("x7#Qp!2zLm9$");
+
+        await component.submit();
+
+        expect(unlockService.unlockWithMasterPassword).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("emits userKey when unlock is successful", async () => {
