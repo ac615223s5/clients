@@ -1,5 +1,5 @@
-import { CommonModule } from "@angular/common";
-import { Component, inject, OnDestroy, OnInit } from "@angular/core";
+import { CommonModule, formatDate } from "@angular/common";
+import { Component, inject, LOCALE_ID, OnDestroy, OnInit } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { Router, RouterModule } from "@angular/router";
 import { firstValueFrom, map, switchMap } from "rxjs";
@@ -48,6 +48,7 @@ import { ImportUpgradeNavigationService } from "../../../tools/popup/settings/im
 })
 export class VaultSettingsComponent implements OnInit, OnDestroy {
   private readonly importUpgradeNavigationService = inject(ImportUpgradeNavigationService);
+  private readonly locale = inject(LOCALE_ID);
 
   lastSync = "--";
   syncLoading = false;
@@ -129,7 +130,10 @@ export class VaultSettingsComponent implements OnInit, OnDestroy {
   private async setLastSync() {
     const last = await this.syncService.getLastSync();
     if (last != null) {
-      this.lastSync = last.toLocaleDateString() + " " + last.toLocaleTimeString();
+      this.lastSync =
+        formatDate(last, "shortDate", this.locale) +
+        " " +
+        formatDate(last, "mediumTime", this.locale);
     } else {
       this.lastSync = this.i18nService.t("never");
     }

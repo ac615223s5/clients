@@ -11,6 +11,7 @@ import localeCy from "@angular/common/locales/cy";
 import localeDa from "@angular/common/locales/da";
 import localeDe from "@angular/common/locales/de";
 import localeEl from "@angular/common/locales/el";
+import localeEn from "@angular/common/locales/en";
 import localeEnGb from "@angular/common/locales/en-GB";
 import localeEnIn from "@angular/common/locales/en-IN";
 import localeEs from "@angular/common/locales/es";
@@ -74,6 +75,15 @@ registerLocaleData(localeCy, "cy");
 registerLocaleData(localeDa, "da");
 registerLocaleData(localeDe, "de");
 registerLocaleData(localeEl, "el");
+// Indexes of the date and time formats in Angular's locale data array
+// (LocaleDataIndex.DateFormat and LocaleDataIndex.TimeFormat).
+const DATE_FORMAT_INDEX = 10;
+const TIME_FORMAT_INDEX = 11;
+// Keep US English text, but show dates as day/month/year and times in 24-hour format.
+const localeEnDayFirst = [...localeEn];
+localeEnDayFirst[DATE_FORMAT_INDEX] = localeEnGb[DATE_FORMAT_INDEX];
+localeEnDayFirst[TIME_FORMAT_INDEX] = localeEnGb[TIME_FORMAT_INDEX];
+registerLocaleData(localeEnDayFirst, "en");
 registerLocaleData(localeEnGb, "en-GB");
 registerLocaleData(localeEnIn, "en-IN");
 registerLocaleData(localeEs, "es");
